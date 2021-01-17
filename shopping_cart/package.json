@@ -1,0 +1,13 @@
+{
+  "name": "shopping_cart",
+  "version": "1.0.0",
+  "main": "shopping_cart.js",
+  "author": "miamagana",
+  "license": "MIT",
+  "dependencies": {
+    "mongodb": "^3.6.3"
+  },
+  "scripts": {
+    "start": "node init_mongo.js"
+  }
+}
