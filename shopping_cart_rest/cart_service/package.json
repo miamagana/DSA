@@ -1,7 +1,7 @@
 {
-  "name": "data-service",
+  "name": "cart-service",
   "version": "1.0.0",
-  "description": "A service to manage data from mongo",
+  "description": "A service to manage the cart requests",
   "scripts": {
     "start": "node bin/run | bunyan"
   },

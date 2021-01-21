@@ -38,7 +38,7 @@ module.exports = (config) => {
     }
   );
 
-  service.get("/find/:servicename/:serviceversion", (req, res, next) => {
+  service.get("/find/:servicename", (req, res, next) => {
     const { servicename } = req.params;
     const service = this.services[servicename];
     if (!!service) {
