@@ -3,11 +3,23 @@ services:
   mongodb:
     image: mongo
     restart: always
+    container_name: "mongodb"
     ports:
       - "27017:27017"
-  node:
+  init_mongo:
     image: "node:8"
-    user: "node"
+    container_name: "init_mongo"
+    working_dir: /home/node/app
+    volumes:
+      - ./:/home/node/app
+    links:
+      - "mongodb"
+    depends_on:
+      - mongodb
+    command: "npm start"
+  node_cart:
+    image: "node:8"
+    container_name: "node_cart"
     working_dir: /home/node/app
     volumes:
       - ./:/home/node/app
@@ -17,4 +29,5 @@ services:
       - "mongodb"
     depends_on:
       - mongodb
-    command: "npm start"
+    stdin_open: true # docker run -i
+    tty: true # docker run -t

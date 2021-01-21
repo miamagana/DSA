@@ -1,0 +1,19 @@
+version: "3.4"
+services:
+  service-registry:
+    image: "node:8"
+    container_name: "service-registry"
+    working_dir: /home/node/app
+    volumes:
+      - ./service-registry:/home/node/app
+    ports:
+      - "3000:3000"
+    command: "npm start"
+    stdin_open: true
+    tty: true
+  mongodb:
+    image: mongo
+    restart: always
+    container_name: "mongodb"
+    ports:
+      - "27017:27017"

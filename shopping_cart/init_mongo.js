@@ -4,6 +4,7 @@ const assert = require("assert");
 const url = "mongodb://mongodb:27017";
 
 const insertDocuments = function (db, callback) {
+  db.collection("products").drop();
   // Get the documents collection
   const collection = db.collection("products");
   // Insert some documents
@@ -24,7 +25,7 @@ const insertDocuments = function (db, callback) {
 };
 
 mongoclient.connect(url, function (err, client) {
-  strictEqual(null, err);
+  assert.strictEqual(null, err);
   console.log("Connected successfully to server");
   const db = client.db("almacen");
   insertDocuments(db, function () {

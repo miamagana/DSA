@@ -1,7 +1,7 @@
 const mongoclient = require("mongodb").MongoClient;
 const assert = require("assert");
 
-const url = "mongodb://localhost:27017";
+const url = "mongodb://mongodb:27017";
 
 mongoclient.connect(url, (err, client) => {
   assert.strictEqual(err, null);
@@ -10,6 +10,7 @@ mongoclient.connect(url, (err, client) => {
   addToCart(db, "muelles", 2);
   addToCart(db, "hierros", 2);
   addToCart(db, "maderas", 2);
+  addToCart(db, "palos", 1);
   setTimeout(function () {
     removeFromCart("muelles", 1);
     removeFromCart("hierros", 2);
@@ -22,25 +23,31 @@ const shopping_cart = [];
 /* 
     Function to add an element from the cart 
     If the element does not exist in the DB it warns the user
+    Act 2: If there is no stock it warns the user by console.
 */
 const addToCart = (db, description, quantity) => {
   return new Promise((resolve) => {
     const collection = db.collection("products");
     findProduct(description, collection)
       .then((element) => {
-        const productInCart = shopping_cart.find(
-          (prod) => prod.desc === description
-        );
-        if (!!productInCart) {
-          productInCart.quantity += quantity;
+        // Act 2: Check if there are items in stock
+        if (enoughItemsInStock(element, quantity)) {
+          const productInCart = shopping_cart.find(
+            (prod) => prod.desc === description
+          );
+          if (!!productInCart) {
+            productInCart.quantity += quantity;
+          } else {
+            const { cod, desc } = element;
+            const product = { cod, desc, quantity };
+            shopping_cart.push(product);
+          }
+          resolve(logCart());
         } else {
-          const { cod, desc } = element;
-          const product = { cod, desc, quantity };
-          shopping_cart.push(product);
+          logNoStock(description);
         }
-        resolve(logCart());
       })
-      .catch((err) => console.warn(`Product ${description} does not exist`));
+      .catch(() => console.warn(`Product ${description} does not exist`));
   });
 };
 
@@ -89,6 +96,11 @@ function logCart() {
 // Activity 2
 function logNoStock(product) {
   console.log(
-    `Request can not be processed due to lack of stock for product ${product}`
+    `Your request to add ${product} can not be processed due to lack of stock`
   );
 }
+
+// Activity 2
+const enoughItemsInStock = (product, quantity) => {
+  return product.stock >= quantity;
+};
