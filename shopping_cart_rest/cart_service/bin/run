@@ -12,7 +12,7 @@ const server = http.createServer(service);
 // Important - a service should not have a fixed port but should randomly choose one
 server.listen(0);
 
-server.on("listening", () => {
+server.on("listening", async () => {
   const registerService = () =>
     axios.put(
       `http://localhost:3000/register/${config.name}/${config.version}/${
@@ -29,4 +29,20 @@ server.on("listening", () => {
       "env"
     )} mode.`
   );
+});
+
+// Unregister on gracefully shutdown
+server.on("close", async () => {
+  try {
+    await axios.delete(
+      `http://localhost:3000/register/${config.name}/${config.version}/${
+        server.address().port
+      }`
+    );
+    log.info(`Service ${config.name} successfully unregistered`);
+  } catch (error) {
+    log.error(`Service ${config.name} could not be unregistered`);
+  } finally {
+    server.close();
+  }
 });

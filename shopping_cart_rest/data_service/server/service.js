@@ -52,13 +52,6 @@ module.exports = (config) => {
       });
     });
   const log = config.log();
-  // Add a request logging middleware in development mode
-  if (service.get("env") === "development") {
-    service.use((req, res, next) => {
-      log.debug(`${req.method}: ${req.url}`);
-      return next();
-    });
-  }
 
   init();
 
@@ -90,7 +83,7 @@ module.exports = (config) => {
     });
   });
 
-  // Create or update a cart
+  // Add item to a cart
   service.put("/cart/:item/:quantity", async (req, res) => {
     let { item, quantity } = req.params;
     quantity = Number(quantity);
@@ -98,39 +91,79 @@ module.exports = (config) => {
       mongoclient.connect(url, async (err, client) => {
         assert.strictEqual(null, err);
         const db = client.db("almacen");
-        db.collection("products")
-          .find()
-          .toArray(async (err, items) => {
-            if (err) throw err;
-            const exists = items.find((it) => it.desc === item);
-            //check if item exists else return 404
-            if (!exists) {
-              res.status(404);
-              res.json(`Item ${item} does not exist`);
-              return res;
-            }
-            //check if there is stock else return 400
-            if (!isAvailable(exists, quantity)) {
-              res.status(400);
-              res.json(`Not enough stock for ${item}`);
-              return res;
-            }
-            const cart = await getCart(db);
-            let updatedItems = cart.items;
-            let itemInCart = updatedItems.find((it) => it.cod === exists.cod);
-            if (!!itemInCart) {
-              const newQuantity = itemInCart.quantity + quantity;
-              itemInCart.quantity = newQuantity;
-            } else {
-              let { stock, ...newItem } = exists;
-              newItem.quantity = quantity;
-              updatedItems.push(newItem);
-            }
-            const newCart = await updateCart(db, updatedItems);
-            res.status(200);
-            client.close();
-            return res.json(newCart);
+        const items = await getItems(db);
+        const exists = items.find((it) => it.desc === item);
+        //check if item exists else return 404
+        if (!exists) {
+          res.status(404);
+          return res.send({ status: 404, msg: `Item ${item} does not exist` });
+        }
+        //check if there is stock else return 400
+        if (!isAvailable(exists, quantity)) {
+          res.status(400);
+          return res.send({ status: 400, msg: `Not enough stock for ${item}` });
+        }
+        const cart = await getCart(db);
+        let updatedItems = cart.items;
+        let itemInCart = updatedItems.find((it) => it.cod === exists.cod);
+        if (!!itemInCart) {
+          const newQuantity = itemInCart.quantity + quantity;
+          itemInCart.quantity = newQuantity;
+        } else {
+          let { stock, ...newItem } = exists;
+          newItem.quantity = quantity;
+          updatedItems.push(newItem);
+        }
+        const newCart = await updateCart(db, updatedItems);
+        await updateItemStock(db, exists.cod, exists.stock - quantity);
+        res.status(200);
+        client.close();
+        return res.json(newCart);
+      });
+    } catch (error) {
+      res.status(500);
+      res.send(error);
+    }
+  });
+
+  // Remove item from the cart
+  service.delete("/cart/:item/:quantity", async (req, res) => {
+    let { item, quantity } = req.params;
+    quantity = Number(quantity);
+    try {
+      mongoclient.connect(url, async (err, client) => {
+        assert.strictEqual(null, err);
+        const db = client.db("almacen");
+        const items = await getItems(db);
+        const exists = items.find((it) => it.desc === item);
+        //check if item exists else return 404
+        if (!exists) {
+          res.status(404);
+          return res.send({ status: 404, msg: `Item ${item} does not exist` });
+        }
+        const cart = await getCart(db);
+        let updatedItems = cart.items;
+        let itemInCart = updatedItems.find((it) => it.desc === item);
+        if (!!itemInCart) {
+          const newQuantity = itemInCart.quantity - quantity;
+          if (newQuantity <= 0) {
+            const itemIndex = updatedItems.findIndex((it) => it.desc === item);
+            updatedItems.splice(itemIndex, 1);
+          } else {
+            itemInCart.quantity = newQuantity;
+          }
+        } else {
+          res.status(404);
+          return res.send({
+            status: 400,
+            msg: `Item ${item} is not in the cart.`,
           });
+        }
+        const newCart = await updateCart(db, updatedItems);
+        await updateItemStock(db, exists.cod, exists.stock + quantity);
+        res.status(200);
+        client.close();
+        return res.json(newCart);
       });
     } catch (error) {
       res.status(500);
@@ -145,6 +178,10 @@ module.exports = (config) => {
 
   const getCart = async (db) => {
     return await db.collection("cart").findOne({ id: 0 });
+  };
+
+  const getItems = async (db) => {
+    return await db.collection("products").find().toArray();
   };
 
   const updateCart = async (db, newItems) => {
@@ -164,6 +201,26 @@ module.exports = (config) => {
       return newCart.value;
     } catch (error) {
       console.error(`Failed to find and update cart: ${error}`);
+    }
+  };
+
+  const updateItemStock = async (db, cod, stock) => {
+    try {
+      const newItem = await db.collection("products").findOneAndUpdate(
+        { cod },
+        {
+          $set: {
+            stock,
+          },
+        },
+        { returnOriginal: false }
+      );
+      console.log(
+        `Successfully updated item: ${JSON.stringify(newItem.value)}`
+      );
+      return newItem.value;
+    } catch (error) {
+      console.error(`Failed to find and update item: ${error}`);
     }
   };
 

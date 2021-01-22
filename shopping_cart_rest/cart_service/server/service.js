@@ -1,44 +1,69 @@
 const express = require("express");
 const axios = require("axios");
-
 const service = express();
-
-const mongoclient = require("mongodb").MongoClient;
-const assert = require("assert");
 
 module.exports = (config) => {
   let dataService = { servicename: "data-service" };
-
+  const log = config.log();
   const init = async () => {
-    const log = config.log();
-    // Add a request logging middleware in development mode
-    if (service.get("env") === "development") {
-      try {
-        dataService = await axios.get(
-          `http://localhost:3000/find/${dataService.servicename}`
-        ).data;
-      } catch(e) {
-        log.debug(e);
-      }
-      service.use((req, next) => {
-        log.debug(`${req.method}: ${req.url}`);
-        return next();
-      });
+    try {
+      const res = await axios.get(
+        `http://localhost:3000/find/${dataService.servicename}`
+      );
+      dataService = res.data;
+      log.debug(dataService);
+    } catch (e) {
+      log.debug(e);
     }
   };
 
-  await init();
+  init();
 
   service.get("/cart", async (req, res) => {
     try {
-      const cart = await axios.get(
-        `http://localhost:${dataService.port}/cart`
-      ).data;
+      const response = await axios.get(
+        `http://localhost:${dataService.serviceport}/cart`
+      );
       res.status(200);
-      res.json(cart);
+      res.json(response.data);
     } catch (error) {
-      res.status(error.status);
-      res.json(error);
+      const { status, msg } = error.response.data;
+      res.status(status);
+      res.send(msg);
+    } finally {
+      return res;
+    }
+  });
+
+  service.put("/cart/:item/:qty", async (req, res) => {
+    try {
+      const { item, qty } = req.params;
+      const response = await axios.put(
+        `http://localhost:${dataService.serviceport}/cart/${item}/${qty}`
+      );
+      res.status(200);
+      res.json(response.data);
+    } catch (error) {
+      const { status, msg } = error.response.data;
+      res.status(status);
+      res.send(msg);
+    } finally {
+      return res;
+    }
+  });
+
+  service.delete("/cart/:item/:qty", async (req, res) => {
+    try {
+      const { item, qty } = req.params;
+      const response = await axios.delete(
+        `http://localhost:${dataService.serviceport}/cart/${item}/${qty}`
+      );
+      res.status(200);
+      res.json(response.data);
+    } catch (error) {
+      const { status, msg } = error.response.data;
+      res.status(status);
+      res.send(msg);
     } finally {
       return res;
     }
