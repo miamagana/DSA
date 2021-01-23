@@ -10,15 +10,34 @@
       }
       body {
         font: 13px Helvetica, Arial;
+      }
+      .container {
         height: 100vh;
         width: 100vw;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: stretch;
+      }
+      .footer {
+        width: 100%;
+        position: fixed;
+        bottom: 0;
+        flex-direction: column;
+        display: flex;
+        align-items: stretch;
+        justify-content: flex-end;
+      }
+      .main-row {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        justify-content: stretch;
+        height: 100%;
       }
       form {
         background: #000;
         padding: 3px;
-        position: fixed;
-        bottom: 0;
-        width: 100%;
       }
       form input {
         border: 0;
@@ -31,8 +50,12 @@
         background: rgb(130, 224, 255);
         border: none;
         padding: 10px;
+        font-size: 0.75rem;
       }
       #messages {
+        display: flex;
+        flex-direction: column;
+        width: 70%;
         list-style-type: none;
         margin: 0;
         padding: 0;
@@ -43,36 +66,148 @@
       #messages li:nth-child(odd) {
         background: #eee;
       }
-      #messages li.mine {
+      li.mine {
         padding: 5px 10px;
         text-align: right;
       }
+      li.other {
+        padding: 5px 10px;
+        text-align: left;
+      }
+      #users {
+        display: flex;
+        flex-direction: column;
+        width: 30%;
+        border-left: 1px solid black;
+      }
+      #users h3 {
+        padding-top: 1rem;
+        padding-left: 5rem;
+      }
+      #users ul {
+        padding-left: 5rem;
+        padding-top: 1rem;
+      }
+      #users ul li span {
+        font-weight: bold;
+        margin-right: 0.5rem;
+      }
+      #users ul li button {
+        font-size: 0.75rem;
+        border: none;
+        color: #4696cd;
+        cursor: pointer;
+      }
       #writing {
         padding: 5px 10px;
-        position: fixed;
-        bottom: 3em;
-        width: 100%;
         font-weight: bold;
+      }
+      .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1; /* Sit on top */
+        padding-top: 100px; /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0, 0, 0); /* Fallback color */
+        background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+      }
+
+      /* Modal Content */
+      .modal-content {
+        background-color: #fefefe;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #888;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: space-between;
+        width: 60%;
+        height: 60%;
+      }
+
+      .modal-content .title {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      /* The Close Button */
+      .close {
+        color: #aaaaaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .close:hover,
+      .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      #pms {
+        list-style-type: none;
+        overflow: auto;
+        height: 100%;
       }
     </style>
   </head>
   <body>
-    <ul id="messages"></ul>
-    <span id="writing"></span>
-    <form action="">
-      <input
-        onfocus="onFocus()"
-        onblur="onBlur()"
-        id="m"
-        autocomplete="off"
-      /><button>Send</button>
-    </form>
+    <div id="myModal" class="modal">
+      <!-- Modal content -->
+      <div class="modal-content">
+        <div class="title">
+          <h3 class="private-title">User</h3>
+          <span class="close" onclick="closePM()">&times;</span>
+        </div>
+        <ul id="pms"></ul>
+        <form id="private" action="">
+          <input id="pm" autocomplete="off" /><button>Send</button>
+        </form>
+      </div>
+    </div>
+    <div class="container">
+      <div class="main-row">
+        <ul id="messages"></ul>
+        <div id="users">
+          <h3 class="userTitle">Online Users</h3>
+          <ul id="online"></ul>
+        </div>
+      </div>
+      <div class="footer">
+        <span id="writing"></span>
+        <form id="general" action="">
+          <input
+            onfocus="onFocus()"
+            onblur="onBlur()"
+            id="m"
+            autocomplete="off"
+          /><button>Send</button>
+        </form>
+      </div>
+    </div>
+    <div></div>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
       var socket = io();
       var user = "";
       var writing = [];
+      var onlineUsers = [];
+      var modal = document.getElementById("myModal");
+      var targetUser = "";
       registerUser("Choose a nickName for the chat");
       function registerUser(msg) {
         while (!!!user) {
@@ -80,7 +215,8 @@
         }
         socket.emit("user connected", user);
       }
-      $("form").submit(function () {
+
+      $("#general").submit(function () {
         const val = $("#m").val();
         socket.emit("chat message", { user, msg: val });
         socket.emit("stopped", user);
@@ -88,6 +224,12 @@
         $("#m").val("");
         return false;
       });
+
+      $("#private").submit(function () {
+        sendPM();
+        return false;
+      });
+
       socket.on("chat message", function ({ user, msg }) {
         $("#messages").append(
           $("<li>").text(`${user ? `${user}: ` : ""}${msg}`)
@@ -110,6 +252,23 @@
         updateWriting();
       });
 
+      socket.on("updateUsers", (users) => {
+        onlineUsers = users.filter((usr) => usr.user !== user);
+        updateOnlineUsers();
+      });
+
+      socket.on("receivePM", ({ user, msg }) => {
+        // On received PM if modal is closed, open it.
+        if (modal.style.display !== "block") {
+          targetUser = onlineUsers.find((usr) => usr.user === user);
+          $(".private-title").text(targetUser.user);
+          modal.style.display = "block";
+          receivePM(msg);
+        } else if (targetUser.user === user) {
+          receivePM(msg);
+        }
+      });
+
       function onFocus() {
         socket.emit("writing", user);
       }
@@ -128,6 +287,49 @@
           $("#writing").text("");
         }
       }
+
+      function updateOnlineUsers() {
+        $("#online").empty();
+        if (!!onlineUsers.length) {
+          onlineUsers.forEach(({ id, user }) => {
+            $("#online").append(
+              $(
+                `<li><span>${user}</span><button onclick="openPM('${id}')"class="btn"><i class="fa fa-paper-plane"></i></button>`
+              )
+            );
+          });
+        }
+      }
+
+      function sendPM() {
+        const val = $("#pm").val();
+        socket.emit("sendPM", { user, target: targetUser.id, msg: val });
+        $("#pms").append($(`<li class="mine">`).text(val));
+        $("#pm").val("");
+      }
+
+      function receivePM(val) {
+        $("#pms").append($(`<li class="other">`).text(val));
+      }
+
+      function openPM(id) {
+        targetUser = onlineUsers.find((usr) => usr.id === id);
+        $(".private-title").text(targetUser.user);
+        $("#pms").empty();
+        modal.style.display = "block";
+      }
+
+      function closePM() {
+        modal.style.display = "none";
+        $("#pms").empty();
+      }
+
+      // When the user clicks anywhere outside of the modal, close it
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          closePM();
+        }
+      };
     </script>
   </body>
 </html>

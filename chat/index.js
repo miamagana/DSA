@@ -9,27 +9,27 @@ app.get("/", function (req, res) {
 var usersOnline = [];
 
 io.on("connection", function (socket) {
-  console.log("a user connected");
+  io.emit("updateUsers", usersOnline);
   socket.on("leave", function (user) {
     const id = socket.id;
     const idx = usersOnline.findIndex((usr) => usr.id === id);
     if (idx >= 0) {
       usersOnline.splice(idx, 1);
-      console.log(`User ${user} disconnected`);
       socket.to("chat").emit("stopped", user);
       socket.broadcast.emit("chat message", {
         msg: `User ${user} disconnected`,
       });
+      socket.broadcast.emit("updateUsers", usersOnline);
     }
   });
   socket.on("user connected", function (user) {
     const id = socket.id;
     socket.join("chat");
     usersOnline.push({ id, user });
-    console.log(`User ${user} connected`);
     socket.broadcast.emit("chat message", {
       msg: `User ${user} connected`,
     });
+    socket.broadcast.emit("updateUsers", usersOnline);
   });
   socket.on("chat message", function ({ user, msg }) {
     console.log("message: " + msg);
@@ -40,6 +40,9 @@ io.on("connection", function (socket) {
   });
   socket.on("stopped", function (user) {
     socket.to("chat").emit("stopped", user);
+  });
+  socket.on("sendPM", function ({ user, target, msg }) {
+    socket.to(target).emit("receivePM", { user, msg });
   });
 });
 
