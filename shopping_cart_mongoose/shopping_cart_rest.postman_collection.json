@@ -1,0 +1,135 @@
+{
+	"info": {
+		"_postman_id": "4f8f16b0-4b9f-48a9-b1ed-26d523fb7ea7",
+		"name": "shopping_cart_rest",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "add_hierros",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:51201/cart/hierros/5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "51201",
+					"path": [
+						"cart",
+						"hierros",
+						"5"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add_muelles",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:51145/cart/muelles/2",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "51145",
+					"path": [
+						"cart",
+						"muelles",
+						"2"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add_error_no_exists",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:51201/cart/maderas/5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "51201",
+					"path": [
+						"cart",
+						"maderas",
+						"5"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add_no_stock",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:51201/cart/hierros/50",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "51201",
+					"path": [
+						"cart",
+						"hierros",
+						"50"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete_hierros",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:51201/cart/hierros/3",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "51201",
+					"path": [
+						"cart",
+						"hierros",
+						"3"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete_item_not_in_cart",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:51201/cart/palos/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "51201",
+					"path": [
+						"cart",
+						"palos",
+						"1"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
